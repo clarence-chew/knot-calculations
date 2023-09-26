@@ -31,35 +31,9 @@ canvas {
         <script src="multivariablePolynomial.js"></script>
         <script type='application/javascript'>
 /**
- * To draw a knot, click on the canvas to draw line segments that will connect to form a polygonal line.
- * 
- * By clicking "Print Knot" you can get your knot data.
- * You can import the knot by calling setKnot(...) with your data.
- * There are buttons to click to make
- * 
- * Letting A(t) be the Alexander polynomial, |A(-1)| is the largest number such that there exists a Fox n-coloring of the knot.
- * (It is normal that the Alexander polynomial might differ from other sources by a factor of t^n or by sign.)
- * 
- * Features:
- * - Input knots using setKnot() from the console, or by drawing the knot
- * - PRESETS["3_1"] until PRESETS["6_3"] are available
- * - Jones polynomial works
- * - HOMFLY polynomial uses the skein relation of (a L+) - (1/a L-) = z L0 as described in http://katlas.org/wiki/The_HOMFLY-PT_Polynomial
- * - HOMFLY (l, z) polynomial tested against Wolfram MathWorld
- * (tested on the sample knots given in the code, compared with http://katlas.org/wiki/The_Rolfsen_Knot_Table)
- * 
- * Other data sources for checking:
- * - https://mathworld.wolfram.com/TrefoilKnot.html
- * - https://mathworld.wolfram.com/FigureEightKnot.html
- * - https://mathworld.wolfram.com/SolomonsSealKnot.html
- * - (no source for 5_2)
- * - https://mathworld.wolfram.com/StevedoresKnot.html
- * - https://mathworld.wolfram.com/MillerInstituteKnot.html
- * 
  * TODO:
  * - Add feature for links (need to specify orientation)
  * - Fox n-coloring generator 
- * - Fix bug: Alexander polynomial (determinant version) does not work
  */
 
 var voidFunc = function() {};
@@ -377,7 +351,7 @@ Knot.prototype.mouseClicked = function() {
  * 
  * Returns the number of components.
  */
-var relabel = function(pd, orientation, equal) {
+var relabel = function(pd, crossingOrientations, equal) {
     equal = equal || [];
     var visited = Array(pd.length*2+equal.length).fill(false);
     var adjList = visited.map(function() { return []; });
@@ -409,7 +383,7 @@ var relabel = function(pd, orientation, equal) {
         // directly put in positions based on orientation
         adjList[i][0] = k;
         adjList[k][1] = i;
-        if (orientation[idx] === 1) {
+        if (crossingOrientations[idx] === 1) {
             adjList[j][1] = l;
             adjList[l][0] = j;
         } else {
@@ -451,7 +425,7 @@ var relabel = function(pd, orientation, equal) {
  * Returns an array that tells if the crossings of the planar diagram
  * are over-crossings or under-crossings.
  */
-var orientations = function(pd) {
+var getOrientations = function(pd) {
     var adjList = Array(pd.length*2).fill(0).map(function() { return []; });
     var visited = adjList.map(function() { return false; });
     var orient = pd.map(function() { return 1; });
@@ -736,7 +710,7 @@ var alexanderPolynomial = function(pd) {
         // unknot
         return [ONE];
     }
-    var orientation = orientations(pd);
+    var crossingOrientations = getOrientations(pd);
     var n = pd.length;
     var coeffs = Array(n-1).fill(0).map(function() { return Array(n).fill(0).map(function() { return []; }); });
     var adjList = Array(2*n).fill(0).map(function() { return []; });
@@ -751,7 +725,7 @@ var alexanderPolynomial = function(pd) {
     for (var i=0;i<coeffs.length;i++) {
         // pd[i][1] gets 1-t
         coeffs[i][index[pd[i][1]]] = [1, -1];
-        if (orientations[i] === 1) { // right handed
+        if (crossingOrientations[i] === 1) { // right handed
             // pd[i][0] gets -1
             coeffs[i][index[pd[i][0]]] = [-1];
             // pd[i][2] gets t
@@ -810,16 +784,16 @@ var countComponents = function(pd) {
 /**
  * Calculates using an arbitrary skein relation.
  */
-var skeinRelation = function(pd, orientation, relation, baseCase, extraUnknot) {
-    orientation = orientation || orientations(pd);
+var skeinRelation = function(pd, crossingOrientations, relation, baseCase, extraUnknot) {
+    crossingOrientations = crossingOrientations || getOrientations(pd);
     var ccount = crossingCount(pd);
     var overCount = ccount[0], underCount = ccount[1];
     if (underCount === 0 || overCount === 0) {
         //if (countComponents(pd) === 1) {
-            return baseCase(pd, orientation);
+            return baseCase(pd, crossingOrientations);
         //}
     } else if (underCount + overCount <= 1) {
-        return baseCase(pd, orientation);
+        return baseCase(pd, crossingOrientations);
     }
     // convert things
     for (var i=0;i<pd.length;i++) {
@@ -830,26 +804,26 @@ var skeinRelation = function(pd, orientation, relation, baseCase, extraUnknot) {
                     reducedPD.push(pd[j].slice());
                 }
             }
-            var newOrientation = orientation.slice();
-            var reducedOrientation = orientation.slice();
-            reducedOrientation.splice(i, 1);
-            newOrientation[i] *= -1;
+            var newOrientations = crossingOrientations.slice();
+            var reducedOrientations = crossingOrientations.slice();
+            reducedOrientations.splice(i, 1);
+            newOrientations[i] *= -1;
             var extraComponents, newPD = [];
             for (var j=0;j<pd.length;j++) {
                 newPD.push(pd[j].slice());
             }
-            if (orientation[i] === -1) {
+            if (crossingOrientations[i] === -1) {
                 // negative crossing
-                extraComponents = relabel(reducedPD, reducedOrientation, [[pd[i][0], pd[i][3]], [pd[i][1], pd[i][2]]]);
+                extraComponents = relabel(reducedPD, reducedOrientations, [[pd[i][0], pd[i][3]], [pd[i][1], pd[i][2]]]);
                 newPD[i] = [pd[i][1], pd[i][2], pd[i][3], pd[i][0]];
             } else {
                 // positive crossing
-                extraComponents = relabel(reducedPD, reducedOrientation, [[pd[i][0], pd[i][1]], [pd[i][2], pd[i][3]]]);
+                extraComponents = relabel(reducedPD, reducedOrientations, [[pd[i][0], pd[i][1]], [pd[i][2], pd[i][3]]]);
                 newPD[i] = [pd[i][3], pd[i][0], pd[i][1], pd[i][2]];
             }
-            var newSkein = skeinRelation(newPD, newOrientation, relation, baseCase, extraUnknot);
-            var reducedSkein = extraUnknot.pow(extraComponents).getProduct(skeinRelation(reducedPD, reducedOrientation, relation, baseCase, extraUnknot));
-            if (orientation[i] === -1) {
+            var newSkein = skeinRelation(newPD, newOrientations, relation, baseCase, extraUnknot);
+            var reducedSkein = extraUnknot.pow(extraComponents).getProduct(skeinRelation(reducedPD, reducedOrientations, relation, baseCase, extraUnknot));
+            if (crossingOrientations[i] === -1) {
                 var result = relation(newSkein, undefined, reducedSkein);
                 //println(JSON.stringify(pd));
                 //println(result);
@@ -882,7 +856,7 @@ var JonesPolynomial = function(pd) {
             return LPlusFactor.getProduct(LPlus).iadd(LMinusFactor.getProduct(LMinus)).neg().truediv(LZeroFactor);
         }
     };
-    var baseCase = function(pd, orientation) {
+    var baseCase = function(pd, crossingOrientations) {
         var components = Math.max(1, countComponents(pd));
         var ccount = crossingCount(pd);
         var over = ccount[0], under = ccount[1];
@@ -910,7 +884,7 @@ var AlexanderPolynomialSkein = function(pd) {
             return LPlusFactor.getProduct(LPlus).iadd(LMinusFactor.getProduct(LMinus)).neg().truediv(LZeroFactor);
         }
     };
-    var baseCase = function(pd, orientation) {
+    var baseCase = function(pd, crossingOrientations) {
         var components = Math.max(1, countComponents(pd));
         var ccount = crossingCount(pd);
         var over = ccount[0], under = ccount[1];
@@ -941,7 +915,7 @@ var HomflyPolynomialAZ = function(pd) {
             return LPlusFactor.getProduct(LPlus).iadd(LMinusFactor.getProduct(LMinus)).getProduct(new MultivariablePolynomial([["0,-1", 1]], ["a", "z"]));
         }
     };
-    var baseCase = function(pd, orientation) {
+    var baseCase = function(pd, crossingOrientations) {
         var components = Math.max(1, countComponents(pd));
         var ccount = crossingCount(pd);
         var over = ccount[0], under = ccount[1];
@@ -964,7 +938,7 @@ var HomflyPolynomialAZ = function(pd) {
             return LPlusFactor.getProduct(LPlus).iadd(LMinusFactor.getProduct(LMinus)).getProduct(new MultivariablePolynomial([["0,-1", 1]], ["a", "z"]));
         }
     };
-    var baseCase = function(pd, orientation) {
+    var baseCase = function(pd, crossingOrientations) {
         var components = Math.max(1, countComponents(pd));
         var ccount = crossingCount(pd);
         var over = ccount[0], under = ccount[1];
@@ -992,7 +966,7 @@ var HomflyPolynomialLM = function(pd) {
             return LPlusFactor.getProduct(LPlus).iadd(LMinusFactor.getProduct(LMinus)).getProduct(new MultivariablePolynomial([["0,-1", -1]], ["l", "m"]));
         }
     };
-    var baseCase = function(pd, orientation) {
+    var baseCase = function(pd, crossingOrientations) {
         var components = Math.max(1, countComponents(pd));
         var ccount = crossingCount(pd);
         var over = ccount[0], under = ccount[1];
@@ -1067,16 +1041,22 @@ var SIDE_BUTTONS = [
             println(JSON.stringify(knot.planarDiagram()));
         }
     }],
-    ["Alexander Polynominal", function() {
+    ["Alexander Polynominal (det)", function() {
+        if (knot.acceptPoints) {
+            println("Invalid operation.");
+        } else {
+            var p = alexanderPolynomial(knot.planarDiagram());
+            println("Alexander Polynomial: ");
+            println(asPolynomial(p));
+        }
+    }],
+    ["Alexander Polynominal (skein)", function() {
         if (knot.acceptPoints) {
             println("Invalid operation.");
         } else {
             var p = AlexanderPolynomialSkein(knot.planarDiagram());
             println("Alexander Polynomial: ");
             println(p.toString());
-            /*var p = alexanderPolynomial(knot.planarDiagram());
-            println("Alexander Polynomial: ");
-            println(asPolynomial(p));*/
         }
     }],
     ["Jones Polynominal", function() {

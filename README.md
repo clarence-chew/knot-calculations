@@ -1,14 +1,18 @@
 # knot-calculations
 Calculate some knot invariants. [Try it now!](https://clarence-chew.github.io/knot-calculations/)
 
-To draw a knot, click on the canvas to draw line segments that will connect to form a polygonal line. By clicking "Print Knot", you can get your knot data. You can import the knot by calling `setKnot(...)` with your data. There are buttons to click to make certain preset knots.
+To draw a knot, click on the canvas to draw line segments that will connect to form a polygonal line.
+By clicking "Print Knot", you can get your knot data in the console.
+You can import the knot by calling `setKnot(...)` with your data. There are also buttons to click to make certain preset knots.
 
-Letting A(t) be the Alexander polynomial, |A(-1)| is the largest number such that there exists a Fox n-coloring of the knot. (It is normal that the Alexander polynomial might differ from other sources by a factor of t^n or by sign.)
+Letting A(t) be the Alexander polynomial, |A(-1)| is the largest number such that there exists a Fox n-coloring of the knot.
+It is normal that the Alexander polynomial calculated by determinant might differ from other sources by a factor of t^n or by sign.
 
 Features:
 - Input knots using setKnot() from the console, or by drawing the knot
 - `PRESETS["3_1"]` until `PRESETS["6_3"]` are available
-- Alexander polynomial works
+- Alexander polynomial calculation using skein relation
+- Alexander polynomial calculation using determinant
 - Jones polynomial works
 - HOMFLY polynomial uses the skein relation of (a L+) - (1/a L-) = z L0 as described [here](http://katlas.org/wiki/The_HOMFLY-PT_Polynomial)
 - HOMFLY (l, z) polynomial tested against Wolfram MathWorld
@@ -25,5 +29,4 @@ Other data sources for checking:
 
 TODO:
 - Add feature for links (need to specify orientation)
-- Fox n-coloring generator 
-- Fix bug: Alexander polynomial (determinant version) does not work
+- Fox n-coloring generator
